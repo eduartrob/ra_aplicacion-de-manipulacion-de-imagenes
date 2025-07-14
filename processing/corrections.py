@@ -65,10 +65,16 @@ def gamma_correction(image, gamma=1.0):
                       for i in np.arange(0, 256)]).astype("uint8")
     return cv2.LUT(image, table)
 
-def equalize_histogram(image, is_color=True):
-    if is_color:
+def equalize_histogram(image):
+    # Si la imagen es de un canal (escala de grises)
+    if len(image.shape) == 2:
+        return cv2.equalizeHist(image)
+    # Si la imagen tiene 3 canales (color)
+    elif len(image.shape) == 3 and image.shape[2] == 3:
         channels = cv2.split(image)
         eq_channels = [cv2.equalizeHist(ch) for ch in channels]
         return cv2.merge(eq_channels)
     else:
-        return cv2.equalizeHist(image)
+        # En otro caso, devolver la imagen sin cambios
+        return image
+

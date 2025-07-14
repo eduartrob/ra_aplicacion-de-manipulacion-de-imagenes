@@ -7,7 +7,7 @@ Esta aplicación permite procesar imágenes aplicando diferentes transformacione
 - Python 3.8 o superior
 - OpenCV
 - NumPy
-- Gradio
+- Gradio 3.48Q
 
 Instalación:
 
