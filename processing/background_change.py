@@ -1,44 +1,66 @@
 import cv2
 import numpy as np
 
-def change_background_color(foreground_img, background_mask, color=(0, 255, 0)):
+def change_background_color(image, foreground_mask, bg_color):
     """
-    Cambia el fondo de la imagen por un color sólido.
-    - foreground_img: imagen original (BGR)
-    - background_mask: máscara binaria donde fondo=0, objeto=255
-    - color: tuple BGR del color de fondo deseado
+    Cambia el fondo a un color sólido.
+    - image: imagen BGR original.
+    - foreground_mask: máscara binaria donde el objeto es 255 y el fondo es 0.
+    - bg_color: tupla BGR, ejemplo (0,0,255) rojo.
     """
-    bg_color_img = np.full(foreground_img.shape, color, dtype=np.uint8)
-    bg_mask = cv2.bitwise_not(background_mask)
-    fg = cv2.bitwise_and(foreground_img, foreground_img, mask=background_mask)
-    bg = cv2.bitwise_and(bg_color_img, bg_color_img, mask=bg_mask)
-    return cv2.add(fg, bg)
+    if image is None or foreground_mask is None or bg_color is None:
+        return image
 
-def change_background_image(foreground_img, background_mask, new_background):
-    """
-    Cambia el fondo de la imagen por otra imagen.
-    - foreground_img: imagen original (BGR)
-    - background_mask: máscara binaria donde fondo=0, objeto=255
-    - new_background: imagen de fondo (BGR) para reemplazar (debe ser mismo tamaño)
-    """
-    if new_background.shape[:2] != foreground_img.shape[:2]:
-        new_background = cv2.resize(new_background, (foreground_img.shape[1], foreground_img.shape[0]))
-    bg_mask = cv2.bitwise_not(background_mask)
-    fg = cv2.bitwise_and(foreground_img, foreground_img, mask=background_mask)
-    bg = cv2.bitwise_and(new_background, new_background, mask=bg_mask)
-    return cv2.add(fg, bg)
+    # Asegurarse de que la máscara sea binaria (0 o 255) y de un solo canal
+    if len(foreground_mask.shape) == 3:
+        foreground_mask = cv2.cvtColor(foreground_mask, cv2.COLOR_BGR2GRAY)
+    _, foreground_mask = cv2.threshold(foreground_mask, 127, 255, cv2.THRESH_BINARY)
 
-def change_background(foreground_img, background_mask, new_background=None, color=None):
+    # Obtener la máscara del fondo (donde el fondo es 255 y el objeto es 0)
+    background_mask = cv2.bitwise_not(foreground_mask)
+
+    # Crear una imagen con el nuevo color de fondo del mismo tamaño que la imagen original
+    new_bg_image = np.full(image.shape, bg_color, dtype=np.uint8)
+
+    # Extraer el objeto de la imagen original usando la máscara del primer plano
+    object_extracted = cv2.bitwise_and(image, image, mask=foreground_mask)
+
+    # Extraer la parte del nuevo fondo que estará en el área del fondo original
+    new_background_area = cv2.bitwise_and(new_bg_image, new_bg_image, mask=background_mask)
+
+    # Combinar el objeto extraído con el nuevo fondo
+    result = cv2.add(object_extracted, new_background_area)
+    return result
+
+
+def change_background_image(image, foreground_mask, new_background):
     """
-    Cambia el fondo usando un color sólido o una imagen.
-    - new_background: imagen BGR para usar como fondo nuevo (opcional)
-    - color: tuple BGR para usar como fondo de color (opcional)
-    
-    Al menos uno debe ser especificado.
+    Cambia el fondo a una imagen.
+    - image: imagen original BGR.
+    - foreground_mask: máscara binaria donde el objeto es 255 y el fondo es 0.
+    - new_background: imagen BGR para el nuevo fondo.
     """
-    if new_background is not None:
-        return change_background_image(foreground_img, background_mask, new_background)
-    elif color is not None:
-        return change_background_color(foreground_img, background_mask, color)
-    else:
-        raise ValueError("Debes especificar un color o una imagen para el fondo nuevo.")
+    if image is None or foreground_mask is None or new_background is None:
+        return image
+
+    # Redimensionar el nuevo fondo para que coincida con la imagen original
+    if new_background.shape[:2] != image.shape[:2]:
+        new_background = cv2.resize(new_background, (image.shape[1], image.shape[0]))
+
+    # Asegurarse de que la máscara sea binaria (0 o 255) y de un solo canal
+    if len(foreground_mask.shape) == 3:
+        foreground_mask = cv2.cvtColor(foreground_mask, cv2.COLOR_BGR2GRAY)
+    _, foreground_mask = cv2.threshold(foreground_mask, 127, 255, cv2.THRESH_BINARY)
+
+    # Obtener la máscara del fondo (donde el fondo es 255 y el objeto es 0)
+    background_mask = cv2.bitwise_not(foreground_mask)
+
+    # Extraer el objeto de la imagen original usando la máscara del primer plano
+    object_extracted = cv2.bitwise_and(image, image, mask=foreground_mask)
+
+    # Extraer la parte de la imagen de fondo que estará en el área del fondo original
+    new_background_area = cv2.bitwise_and(new_background, new_background, mask=background_mask)
+
+    # Combinar el objeto extraído con el nuevo fondo
+    result = cv2.add(object_extracted, new_background_area)
+    return result
